@@ -54,7 +54,7 @@
   /* grid-template-columns is set inline per row by render() = repeat(rowCount, var(--cw)) */
   .band{display:grid;justify-content:center;align-items:stretch;gap:clamp(10px,1.8vw,20px);margin-bottom:clamp(12px,2.4vw,24px)}
   .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);border:1px solid rgba(170,212,237,.55);
-    display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;text-decoration:none;color:var(--ink);
+    position:relative;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;text-decoration:none;color:var(--ink);
     transition:transform .18s ease,box-shadow .18s ease}
   a.card:hover,a.card:focus-visible{transform:translateY(-5px);box-shadow:var(--shadow-lg);outline:none}
   a.card:focus-visible{box-shadow:0 0 0 3px var(--orange),var(--shadow-lg)}
@@ -65,6 +65,10 @@
   .card.row .logo{width:auto;aspect-ratio:1/1}
   .card.col{flex-direction:column;text-align:center}
   .card.textonly{justify-content:center;align-items:center}
+  /* category tag — small, all caps, pinned to the bottom of the tile */
+  .type{position:absolute;left:8px;right:8px;bottom:7px;text-align:center;font-size:10px;font-weight:800;
+    letter-spacing:.09em;text-transform:uppercase;color:var(--muted);line-height:1.1;pointer-events:none}
+  .band .card.hastype{padding-bottom:22px}   /* reserve room so the tag never overlaps the name */
 
   /* per-row sizing: card width (--cw) + logo + type all shrink as rows widen */
   .band.n2{--cw:clamp(200px,30vw,330px)} .n2 .card{min-height:176px} .n2 .logo{height:116px} .n2 .name{font-size:clamp(18px,2.2vw,24px)}
@@ -129,7 +133,10 @@
 
 <script>
 const CONFIG = {
-  sheetCsvUrl: "sponsors.csv",   // local CSV drives the page; swap for a published Google Sheet URL later
+  // PASTE the Google Sheet "Publish to web -> CSV" link here to drive the LIVE page from the sheet.
+  // Leave "" to use the in-repo sponsors.csv. See SHEET_SETUP.md for the 3 steps.
+  sheetCsvUrl: "",
+  localCsv: "sponsors.csv",      // automatic fallback when the sheet is blank/unreachable
   auctionUrl: "https://app.galabid.com/manlytrivia/items",
   logoBase: "logos/"
 };
@@ -172,21 +179,26 @@ function normalise(rows){
     // publish gate: a row shows only when Active is affirmatively yes. Absent column (SAMPLE) = shown.
     active:(r.active===undefined ? true : isActive(r.active)),
     amount:Number(String(r.amount||r.tier||"0").replace(/[^0-9.]/g,""))||0,  // $ sort key, never shown; legacy "tier" still read
+    type:(r.type||r.category||"").trim(),   // RAFFLE / SILENT AUCTION / SUPPORTER tag
     logo:resolveLogo(r.logo||r.logourl||""), website:r.website||r.url||"" })).filter(s=>s.name && s.active);
 }
 function makeCard(s){
   const link=s.website&&s.website!="#";
   const el=document.createElement(link?"a":"div"); el.className="card";
   if(link){el.href=s.website;el.target="_blank";el.rel="noopener";el.setAttribute("aria-label",s.name+" (opens in new tab)");}
+  let type=null;
+  if(s.type){ el.classList.add("hastype"); type=document.createElement("div"); type.className="type"; type.textContent=s.type; }
   if(!s.logo){ el.classList.add("col","textonly");
-    const n=document.createElement("div");n.className="name";n.textContent=s.name;el.appendChild(n);return el; }
+    const n=document.createElement("div");n.className="name";n.textContent=s.name;el.appendChild(n);
+    if(type)el.appendChild(type);return el; }
   const wrap=document.createElement("div");wrap.className="logo";
   const img=document.createElement("img");img.alt=s.name;img.loading="lazy";img.src=s.logo;
   const n=document.createElement("div");n.className="name";n.textContent=s.name;
   el.classList.add("col");
   img.addEventListener("load",()=>{const r=img.naturalWidth/(img.naturalHeight||1);if(r<1.4){el.classList.remove("col");el.classList.add("row");}});
   img.addEventListener("error",()=>{el.classList.remove("row");el.classList.add("col","textonly");wrap.remove();});
-  wrap.appendChild(img);el.appendChild(wrap);el.appendChild(n);return el;
+  wrap.appendChild(img);el.appendChild(wrap);el.appendChild(n);
+  if(type)el.appendChild(type);return el;
 }
 const ROW_COUNTS=[2,3,4,4];   // top to bottom; every row after these holds 5
 function render(sponsors){
@@ -207,11 +219,13 @@ function render(sponsors){
   }
 }
 async function boot(){
+  // try the Google Sheet first, then the local CSV, then the built-in SAMPLE
   let data=SAMPLE;
-  if(CONFIG.sheetCsvUrl){
-    try{const res=await fetch(CONFIG.sheetCsvUrl,{cache:"no-store"});
-      if(res.ok){const parsed=parseCSV(await res.text());if(normalise(parsed).length)data=parsed;}}
-    catch(e){console.warn("Sheet fetch failed, using sample.",e);}
+  for(const url of [CONFIG.sheetCsvUrl, CONFIG.localCsv].filter(Boolean)){
+    try{
+      const res=await fetch(url,{cache:"no-store"});
+      if(res.ok){ const parsed=parseCSV(await res.text()); if(normalise(parsed).length){ data=parsed; break; } }
+    }catch(e){ console.warn("Source failed, trying next:",url,e); }
   }
   render(normalise(data));   // normalise exactly once (data is raw rows here, never pre-normalised)
 }

@@ -36,7 +36,9 @@
   tr.staged td{background:#fbfbf4}
   input[type=text],input[type=number]{width:100%;font-family:var(--font);font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff}
   input[type=number]{width:92px}
+  select.type{font-family:var(--font);font-size:13px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
   input.website.eg{color:#9fb0ba}   /* example/placeholder https URLs sit light grey */
+  .pv-type{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
   .act{display:flex;align-items:center;gap:6px;white-space:nowrap}
   .act input{width:17px;height:17px}
   .tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px}
@@ -80,7 +82,7 @@
   <div class="layout">
     <div class="panel">
       <table>
-        <thead><tr><th>Active</th><th>Name</th><th>$</th><th>Logo</th><th>Website</th><th></th></tr></thead>
+        <thead><tr><th>Active</th><th>Name</th><th>$</th><th>Logo</th><th>Website</th><th>Type</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -139,12 +141,20 @@ function makeRow(d={}){
       <input type="file" class="file" accept="image/*" hidden>
     </div><span class="note"></span></td>
     <td><input type="text" class="website" placeholder="https://…"></td>
+    <td><select class="type">
+      <option value="">—</option>
+      <option>Raffle</option>
+      <option>Silent Auction</option>
+      <option>Auction &amp; Raffle</option>
+      <option>Supporter</option>
+    </select></td>
     <td><button class="del" type="button">Delete</button></td>`;
   tr.querySelector(".active").checked = d.active===undefined ? true : isYes(d.active);
   tr.querySelector(".name").value=d.name||"";
   tr.querySelector(".amount").value=d.amount||"";
   tr.querySelector(".logo").value=d.logo||"";
   tr.querySelector(".website").value=d.website||"";
+  tr.querySelector(".type").value=d.type||"";
   const thumb=tr.querySelector(".thumb");
   if(d.logo){ thumb.src=CSV_URL.replace(/[^/]*$/,"")+"logos/"+d.logo; thumb.classList.add("show"); }
 
@@ -187,7 +197,8 @@ function rowData(){
     amount:Number(tr.querySelector(".amount").value)||0,
     logo:tr.querySelector(".logo").value.trim(),
     thumb:tr.querySelector(".thumb"),
-    website:tr.querySelector(".website").value.trim()
+    website:tr.querySelector(".website").value.trim(),
+    type:tr.querySelector(".type").value
   }));
 }
 const ROW_COUNTS=[2,3,4,4];
@@ -222,6 +233,7 @@ function renderPreview(){
         c.appendChild(img);
       }
       const nm=document.createElement("div"); nm.className="pv-name"; nm.textContent=r.name; c.appendChild(nm);
+      if(r.type){ const ty=document.createElement("div"); ty.className="pv-type"; ty.textContent=r.type; c.appendChild(ty); }
       band.appendChild(c);
     });
     pv.appendChild(band); i+=n; rowNo++;
@@ -257,9 +269,9 @@ async function connect(){
 }
 
 function buildCSV(){
-  const out=["Active,Name,Amount,Logo,Website"];
+  const out=["Active,Name,Amount,Logo,Website,Type"];
   rowData().forEach(r=>{ if(!r.name)return;
-    out.push([r.active?"yes":"no", r.name, r.amount||"0", r.logo, r.website].map(csvCell).join(",")); });
+    out.push([r.active?"yes":"no", r.name, r.amount||"0", r.logo, r.website, r.type].map(csvCell).join(",")); });
   return out.join("\n")+"\n";
 }
 async function save(){
