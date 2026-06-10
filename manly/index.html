@@ -45,7 +45,7 @@
 
   /* the divider + bobbing arrows, now the bottom edge of the fixed top bar */
   .gate{display:flex;align-items:center;gap:clamp(14px,3vw,26px);max-width:100%;
-    margin:0 auto;padding:clamp(10px,2vw,16px) 24px;background:var(--green)}
+    margin:-18px auto 0;padding:2px 24px clamp(8px,1.6vw,14px);background:var(--green)}   /* pull up to eat the banner PNG's transparent bottom + trim top padding */
   .gate .rule{flex:1;height:2px;background:var(--line);border-radius:2px}
   .gate .down{flex:0 0 auto;width:clamp(20px,4vw,26px);height:auto;color:var(--orange);animation:bob 1.6s ease-in-out infinite}
 
@@ -178,7 +178,8 @@ function normalise(rows){
   return rows.map(r=>({ name:r.name||"",
     // publish gate: a row shows only when Active is affirmatively yes. Absent column (SAMPLE) = shown.
     active:(r.active===undefined ? true : isActive(r.active)),
-    amount:Number(String(r.amount||r.tier||"0").replace(/[^0-9.]/g,""))||0,  // $ sort key, never shown; legacy "tier" still read
+    amount:Number(String(r.amount||"0").replace(/[^0-9.]/g,""))||0,  // sort key WITHIN a tier; never shown
+    tier:(/^[A-D]$/i.test(String(r.tier||"").trim()) ? String(r.tier).trim().toUpperCase() : "D"),  // A=biggest band … D=smallest; blank/invalid -> D
     type:(r.type||r.category||"").trim(),   // RAFFLE / SILENT AUCTION / SUPPORTER tag
     logo:resolveLogo(r.logo||r.logourl||""), website:r.website||r.url||"" })).filter(s=>s.name && s.active);
 }
@@ -200,23 +201,23 @@ function makeCard(s){
   wrap.appendChild(img);el.appendChild(wrap);el.appendChild(n);
   if(type)el.appendChild(type);return el;
 }
-const ROW_COUNTS=[2,3,4,4];   // top to bottom; every row after these holds 5
+// Tier = size band + how many sit per row. A biggest (2/row) … D smallest (5/row).
+const TIERS=[{t:"A",n:2},{t:"B",n:3},{t:"C",n:4},{t:"D",n:5}];
 function render(sponsors){
   const wall=document.getElementById("wall");wall.innerHTML="";
-  // bigger sponsor = higher up. Sort by $ desc; ties keep sheet order (stable via index).
-  const ordered=sponsors.map((s,i)=>({s,i}))
-    .sort((a,b)=>(b.s.amount-a.s.amount)||(a.i-b.i)).map(x=>x.s);
-  let idx=0,rowNo=0;
-  while(idx<ordered.length){
-    const count=rowNo<ROW_COUNTS.length?ROW_COUNTS[rowNo]:5;
-    const slice=ordered.slice(idx,idx+count);
-    const band=document.createElement("div");
-    band.className="band n"+count;
-    band.style.gridTemplateColumns="repeat("+slice.length+",var(--cw))";  // centres full AND partial rows
-    slice.forEach(s=>band.appendChild(makeCard(s)));
-    wall.appendChild(band);
-    idx+=count; rowNo++;
-  }
+  TIERS.forEach(({t,n})=>{
+    // this tier's sponsors, ordered by $ desc (ties keep sheet order via stable index)
+    const list=sponsors.map((s,i)=>({s,i})).filter(x=>x.s.tier===t)
+      .sort((a,b)=>(b.s.amount-a.s.amount)||(a.i-b.i)).map(x=>x.s);
+    for(let idx=0; idx<list.length; idx+=n){
+      const slice=list.slice(idx,idx+n);
+      const band=document.createElement("div");
+      band.className="band n"+n;
+      band.style.gridTemplateColumns="repeat("+slice.length+",var(--cw))";  // centres full AND partial rows
+      slice.forEach(s=>band.appendChild(makeCard(s)));
+      wall.appendChild(band);
+    }
+  });
 }
 async function boot(){
   // try the Google Sheet first, then the local CSV, then the built-in SAMPLE

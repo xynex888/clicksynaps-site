@@ -38,6 +38,7 @@
   input.name{min-width:96px}      /* keep the name readable, not squished to 2 letters */
   input[type=number]{width:66px}
   select.type{font-family:var(--font);font-size:12px;padding:5px 4px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);max-width:118px}
+  select.tier{font-family:var(--font);font-size:12px;padding:5px 4px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);max-width:58px}
   input.website.eg{color:#9fb0ba}   /* example/placeholder https URLs sit light grey */
   .pv-type{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
   .act{display:flex;flex-direction:column;align-items:center;gap:3px;white-space:nowrap}
@@ -66,9 +67,10 @@
 </head>
 <body>
   <h1>Sponsor Admin</h1>
-  <p class="sub">Bigger <b>$ amount</b> floats a sponsor higher up the wall (the amount is never shown publicly).
+  <p class="sub"><b>Tier</b> sets the tile size band — <b>A</b> = biggest (2 per row) … <b>D</b> = smallest (5 per row).
+  Within a tier, bigger <b>$ amount</b> sorts higher (the amount is never shown publicly).
   Leave a row <b>Staged</b> (Active off) while you wait on a logo — staged rows stay off the live page.
-  <b>Connect the project folder</b> once and logos copy straight into <code>/logos/</code> and Save writes <code>sponsors.csv</code> to disk.</p>
+  <b>Connect the project folder</b> once and logos copy into <code>/logos/</code> and Save writes <code>sponsors.csv</code> to disk.</p>
 
   <div class="bar">
     <button class="primary" id="connect">🔌 Connect project folder</button>
@@ -80,17 +82,11 @@
     </span>
   </div>
 
-  <div class="layout">
-    <div class="panel">
-      <table>
-        <thead><tr><th>Active</th><th>Name</th><th>$</th><th>Logo</th><th>Website</th><th>Type</th><th></th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-    <div class="panel">
-      <div class="pv-h">Live preview</div>
-      <div id="preview"></div>
-    </div>
+  <div class="panel">
+    <table>
+      <thead><tr><th>Active</th><th>Name</th><th>Tier</th><th>$</th><th>Logo</th><th>Website</th><th>Type</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
   </div>
 
   <p class="help">
@@ -134,6 +130,12 @@ function makeRow(d={}){
   tr.innerHTML=`
     <td><label class="act"><input type="checkbox" class="active"><span class="tag"></span></label></td>
     <td><input type="text" class="name" placeholder="Sponsor name"></td>
+    <td><select class="tier">
+      <option>A</option>
+      <option>B</option>
+      <option>C</option>
+      <option>D</option>
+    </select></td>
     <td><input type="number" class="amount" min="0" step="50" placeholder="0"></td>
     <td><div class="logocell">
       <img class="thumb" alt="">
@@ -152,6 +154,7 @@ function makeRow(d={}){
     <td><button class="del" type="button">Delete</button></td>`;
   tr.querySelector(".active").checked = d.active===undefined ? true : isYes(d.active);
   tr.querySelector(".name").value=d.name||"";
+  tr.querySelector(".tier").value=(/^[A-D]$/i.test((d.tier||"").trim())?d.tier.trim().toUpperCase():"D");
   tr.querySelector(".amount").value=d.amount||"";
   tr.querySelector(".logo").value=d.logo||"";
   tr.querySelector(".website").value=d.website||"";
@@ -195,6 +198,7 @@ function rowData(){
     el:tr,
     active:tr.querySelector(".active").checked,
     name:tr.querySelector(".name").value.trim(),
+    tier:tr.querySelector(".tier").value,
     amount:Number(tr.querySelector(".amount").value)||0,
     logo:tr.querySelector(".logo").value.trim(),
     thumb:tr.querySelector(".thumb"),
@@ -202,7 +206,6 @@ function rowData(){
     type:tr.querySelector(".type").value
   }));
 }
-const ROW_COUNTS=[2,3,4,4];
 function refresh(){
   let live=0,staged=0;
   rowData().forEach(r=>{
@@ -213,32 +216,6 @@ function refresh(){
     r.active?live++:staged++;
   });
   document.getElementById("count").innerHTML=`<b>${live}</b> live · ${staged} staged`;
-  renderPreview();
-}
-function renderPreview(){
-  const pv=document.getElementById("preview"); pv.innerHTML="";
-  const list=rowData().filter(r=>r.active&&r.name).sort((a,b)=>b.amount-a.amount);
-  if(!list.length){ pv.innerHTML='<div class="pv-empty">No live sponsors yet.<br>Add one and tick Active.</div>'; return; }
-  let i=0,rowNo=0;
-  while(i<list.length){
-    const n=rowNo<ROW_COUNTS.length?ROW_COUNTS[rowNo]:5;
-    const slice=list.slice(i,i+n);
-    const band=document.createElement("div"); band.className="pv-band";
-    band.style.gridTemplateColumns="repeat("+slice.length+",minmax(0,1fr))";
-    slice.forEach(r=>{
-      const c=document.createElement("div"); c.className="pv-card";
-      if(r.logo){
-        const img=document.createElement("img"); img.alt=r.name;
-        img.src = (r.thumb.dataset.local==="1") ? r.thumb.src : "logos/"+r.logo;
-        img.onerror=()=>img.remove();
-        c.appendChild(img);
-      }
-      const nm=document.createElement("div"); nm.className="pv-name"; nm.textContent=r.name; c.appendChild(nm);
-      if(r.type){ const ty=document.createElement("div"); ty.className="pv-type"; ty.textContent=r.type; c.appendChild(ty); }
-      band.appendChild(c);
-    });
-    pv.appendChild(band); i+=n; rowNo++;
-  }
 }
 function msg(h){ document.getElementById("msg").innerHTML=h; }
 
@@ -270,9 +247,9 @@ async function connect(){
 }
 
 function buildCSV(){
-  const out=["Active,Name,Amount,Logo,Website,Type"];
+  const out=["Active,Name,Tier,Amount,Logo,Website,Type"];
   rowData().forEach(r=>{ if(!r.name)return;
-    out.push([r.active?"yes":"no", r.name, r.amount||"0", r.logo, r.website, r.type].map(csvCell).join(",")); });
+    out.push([r.active?"yes":"no", r.name, r.tier, r.amount||"0", r.logo, r.website, r.type].map(csvCell).join(",")); });
   return out.join("\n")+"\n";
 }
 async function save(){
