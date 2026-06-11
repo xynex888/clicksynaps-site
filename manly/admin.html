@@ -50,6 +50,7 @@
   .thumb.show{display:block}
   .choose{background:#eef6fb;color:var(--royal);border:1px solid var(--line);padding:5px 7px;border-radius:8px;font-size:11px;white-space:nowrap}
   .lf{width:74px;min-width:0}
+  input.location.lc{width:92px;min-width:0}
   .note{font-size:10px;color:var(--warn);display:block;margin-top:3px}
   .del{background:#fff;color:var(--bad);border:1px solid #f0d2cd;padding:5px 7px;border-radius:8px;font-size:11px}
   .help{margin-top:16px;font-size:12px;color:#5a6b76;max-width:920px;line-height:1.55}
@@ -84,7 +85,7 @@
 
   <div class="panel">
     <table>
-      <thead><tr><th>Active</th><th>Name</th><th>Tier</th><th>$</th><th>Logo</th><th>Website</th><th>Type</th><th></th></tr></thead>
+      <thead><tr><th>Active</th><th>Name</th><th>Tier</th><th>$</th><th>Logo</th><th>Website</th><th>Location</th><th>Type</th><th></th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
@@ -144,6 +145,7 @@ function makeRow(d={}){
       <input type="file" class="file" accept="image/*" hidden>
     </div><span class="note"></span></td>
     <td><input type="text" class="website" placeholder="https://…"></td>
+    <td><input type="text" class="location lc" placeholder="e.g. Manly"></td>
     <td><select class="type">
       <option value="">—</option>
       <option>Raffle</option>
@@ -158,6 +160,7 @@ function makeRow(d={}){
   tr.querySelector(".amount").value=d.amount||"";
   tr.querySelector(".logo").value=d.logo||"";
   tr.querySelector(".website").value=d.website||"";
+  tr.querySelector(".location").value=d.location||"";
   tr.querySelector(".type").value=d.type||"";
   const thumb=tr.querySelector(".thumb");
   if(d.logo){ thumb.src=CSV_URL.replace(/[^/]*$/,"")+"logos/"+d.logo; thumb.classList.add("show"); }
@@ -203,6 +206,7 @@ function rowData(){
     logo:tr.querySelector(".logo").value.trim(),
     thumb:tr.querySelector(".thumb"),
     website:tr.querySelector(".website").value.trim(),
+    location:tr.querySelector(".location").value.trim(),
     type:tr.querySelector(".type").value
   }));
 }
@@ -247,9 +251,9 @@ async function connect(){
 }
 
 function buildCSV(){
-  const out=["Active,Name,Tier,Amount,Logo,Website,Type"];
+  const out=["Active,Name,Tier,Amount,Logo,Website,Location,Type"];
   rowData().forEach(r=>{ if(!r.name)return;
-    out.push([r.active?"yes":"no", r.name, r.tier, r.amount||"0", r.logo, r.website, r.type].map(csvCell).join(",")); });
+    out.push([r.active?"yes":"no", r.name, r.tier, r.amount||"0", r.logo, r.website, r.location, r.type].map(csvCell).join(",")); });
   return out.join("\n")+"\n";
 }
 async function save(){

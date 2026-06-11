@@ -65,10 +65,15 @@
   .card.row .logo{width:auto;aspect-ratio:1/1}
   .card.col{flex-direction:column;text-align:center}
   .card.textonly{justify-content:center;align-items:center}
-  /* category tag — small, all caps, pinned to the bottom of the tile */
+  /* location line + category tag — pinned to the bottom of the tile (location sits above the tag) */
   .type{position:absolute;left:8px;right:8px;bottom:7px;text-align:center;font-size:10px;font-weight:800;
     letter-spacing:.09em;text-transform:uppercase;color:var(--muted);line-height:1.1;pointer-events:none}
+  .loc{position:absolute;left:8px;right:8px;bottom:7px;text-align:center;font-size:11px;font-weight:600;
+    color:#54707f;line-height:1.1;pointer-events:none}
+  .card.hastype .loc{bottom:21px}            /* lift the location above the tag when both are present */
   .band .card.hastype{padding-bottom:22px}   /* reserve room so the tag never overlaps the name */
+  .band .card.hasloc{padding-bottom:22px}
+  .band .card.hastype.hasloc{padding-bottom:36px}   /* room for both lines */
 
   /* per-row sizing: card width (--cw) + logo + type all shrink as rows widen */
   .band.n2{--cw:clamp(200px,30vw,330px)} .n2 .card{min-height:176px} .n2 .logo{height:116px} .n2 .name{font-size:clamp(18px,2.2vw,24px)}
@@ -180,6 +185,7 @@ function normalise(rows){
     active:(r.active===undefined ? true : isActive(r.active)),
     amount:Number(String(r.amount||"0").replace(/[^0-9.]/g,""))||0,  // sort key WITHIN a tier; never shown
     tier:(/^[A-D]$/i.test(String(r.tier||"").trim()) ? String(r.tier).trim().toUpperCase() : "D"),  // A=biggest band … D=smallest; blank/invalid -> D
+    location:(r.location||r.area||r.suburb||"").trim(),   // place line above the type tag
     type:(r.type||r.category||"").trim(),   // RAFFLE / SILENT AUCTION / SUPPORTER tag
     logo:resolveLogo(r.logo||r.logourl||""), website:r.website||r.url||"" })).filter(s=>s.name && s.active);
 }
@@ -189,9 +195,11 @@ function makeCard(s){
   if(link){el.href=s.website;el.target="_blank";el.rel="noopener";el.setAttribute("aria-label",s.name+" (opens in new tab)");}
   let type=null;
   if(s.type){ el.classList.add("hastype"); type=document.createElement("div"); type.className="type"; type.textContent=s.type; }
+  let loc=null;
+  if(s.location){ el.classList.add("hasloc"); loc=document.createElement("div"); loc.className="loc"; loc.textContent=s.location; }
   if(!s.logo){ el.classList.add("col","textonly");
     const n=document.createElement("div");n.className="name";n.textContent=s.name;el.appendChild(n);
-    if(type)el.appendChild(type);return el; }
+    if(loc)el.appendChild(loc); if(type)el.appendChild(type);return el; }
   const wrap=document.createElement("div");wrap.className="logo";
   const img=document.createElement("img");img.alt=s.name;img.loading="lazy";img.src=s.logo;
   const n=document.createElement("div");n.className="name";n.textContent=s.name;
@@ -199,7 +207,7 @@ function makeCard(s){
   img.addEventListener("load",()=>{const r=img.naturalWidth/(img.naturalHeight||1);if(r<1.4){el.classList.remove("col");el.classList.add("row");}});
   img.addEventListener("error",()=>{el.classList.remove("row");el.classList.add("col","textonly");wrap.remove();});
   wrap.appendChild(img);el.appendChild(wrap);el.appendChild(n);
-  if(type)el.appendChild(type);return el;
+  if(loc)el.appendChild(loc); if(type)el.appendChild(type);return el;
 }
 // Tier = size band + how many sit per row. A biggest (2/row) … D smallest (5/row).
 const TIERS=[{t:"A",n:2},{t:"B",n:3},{t:"C",n:4},{t:"D",n:5}];
