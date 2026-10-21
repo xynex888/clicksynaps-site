@@ -114,7 +114,7 @@
     display: flex; gap: 8px; max-width: 470px; margin: 0 auto;
     padding: 6px; border-radius: 999px;
     background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px);
-    opacity: 0; animation: fadeUp 1s ease 2.6s forwards;
+    opacity: 0; animation: fadeUp 1s ease 4.0s forwards;
   }
   .invite input {
     flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
@@ -129,7 +129,7 @@
   .btn-green:hover { background: #24946a; }
   .note {
     margin-top: 16px; font: 400 11px/1.6 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint);
-    opacity: 0; animation: fadeUp 1s ease 2.9s forwards;
+    opacity: 0; animation: fadeUp 1s ease 4.3s forwards;
   }
   .thanks { display: none; font: italic 400 19px/1.5 var(--serif); color: var(--ink); }
   .thanks b { font: 500 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--green-hi); display: block; margin-bottom: 10px; }
@@ -174,7 +174,7 @@
   .btn-ghost { text-decoration: none; }
   body.split .dock { display: block; }
   .dock { display: none; flex: 0 0 380px; }
-  .dock .login { animation: fadeUp 1s ease 2.2s backwards; }
+  .dock .login { animation: fadeUp 1s ease 5.0s backwards; }
   @media (max-width: 900px) {
     body.split main { flex-direction: column; justify-content: center; }
     body.split .hero { text-align: center; }
@@ -254,15 +254,15 @@
   // Tagline rotator
   const lines = [...document.querySelectorAll('.rotator span')];
   let i = 0;
-  // First line fades up at 2.0s, once the logo has pulled focus; then cycle every 4.2s
-  setTimeout(() => {
-    lines[0].classList.add('on');
-    setInterval(() => {
-      lines[i].classList.remove('on');
-      i = (i + 1) % lines.length;
-      lines[i].classList.add('on');
-    }, 4200);
-  }, 2000);
+  // Intro order: logo pulls focus (0.5s) → first line (2.0s) → invite (4.0s) → Welcome back (5.0s).
+  // The first line holds until the intro has settled (7.5s), then lines cycle every 4.2s.
+  function nextLine() {
+    lines[i].classList.remove('on');
+    i = (i + 1) % lines.length;
+    lines[i].classList.add('on');
+  }
+  setTimeout(() => lines[0].classList.add('on'), 2000);
+  setTimeout(() => { nextLine(); setInterval(nextLine, 4200); }, 7500);
 
   // Invite: posted to the capture script; "on the list" only once it has recorded the request
   const INVITE_URL = 'https://script.google.com/macros/s/AKfycbzjz4XRTCSeIGwqkLyay3rIbzP4H78HUWYeM44BprKqKMt_5HOoQ5D7bUIoyQ2LOaug6A/exec';
