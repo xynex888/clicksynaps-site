@@ -212,7 +212,7 @@
       <div class="logo-wrap"><img class="logo" src="assets/clicksynaps_logo.png" alt="ClickSynaps"></div>
 
       <div class="rotator" aria-live="polite">
-        <span class="on">The First Answer Is Rarely the Best One</span>
+        <span>The First Answer Is Rarely the Best One</span>
         <span>Fix The Flow</span>
         <span>Unleash Your Creativity</span>
         <span>Become a Team Player</span>
@@ -254,11 +254,15 @@
   // Tagline rotator
   const lines = [...document.querySelectorAll('.rotator span')];
   let i = 0;
-  setTimeout(() => setInterval(() => {
-    lines[i].classList.remove('on');
-    i = (i + 1) % lines.length;
-    lines[i].classList.add('on');
-  }, 4200), 2600);
+  // First line fades up at 2.0s, once the logo has pulled focus; then cycle every 4.2s
+  setTimeout(() => {
+    lines[0].classList.add('on');
+    setInterval(() => {
+      lines[i].classList.remove('on');
+      i = (i + 1) % lines.length;
+      lines[i].classList.add('on');
+    }, 4200);
+  }, 2000);
 
   // Invite: posted to the capture script; "on the list" only once it has recorded the request
   const INVITE_URL = 'https://script.google.com/macros/s/AKfycbzjz4XRTCSeIGwqkLyay3rIbzP4H78HUWYeM44BprKqKMt_5HOoQ5D7bUIoyQ2LOaug6A/exec';
